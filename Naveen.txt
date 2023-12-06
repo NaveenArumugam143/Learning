@@ -1,0 +1,54 @@
+const { DynamoDBClient, ScanCommand } = require("@aws-sdk/client-dynamodb");
+
+async function scanTableWithOptionalFilter() {
+  const client = new DynamoDBClient({ region: "us-east-1" }); // Replace with your desired region
+  const tableName = "your_table_name"; // Replace with your actual table name
+
+  const params = {
+    TableName: tableName,
+  };
+
+  const optionalFilters = {
+    firstName: "arun",
+    ageStart: 20,
+    ageEnd: 30,
+    // Add other optional parameters here
+  };
+
+  let filterExpression = "";
+  const expressionAttributeValues = {};
+
+  if (optionalFilters.firstName) {
+    filterExpression += "#name.#first = :firstName";
+    expressionAttributeValues[":firstName"] = { S: optionalFilters.firstName };
+  }
+
+  if (optionalFilters.ageStart && optionalFilters.ageEnd) {
+    if (filterExpression !== "") filterExpression += " and ";
+    filterExpression += "#age between :ageStart and :ageEnd";
+    expressionAttributeValues[":ageStart"] = { N: optionalFilters.ageStart.toString() };
+    expressionAttributeValues[":ageEnd"] = { N: optionalFilters.ageEnd.toString() };
+  }
+
+  // Add other optional parameters to the filterExpression and expressionAttributeValues as needed
+
+  if (filterExpression !== "") {
+    params.FilterExpression = filterExpression;
+    params.ExpressionAttributeNames = {
+      "#name": "name",
+      "#first": "first",
+      "#age": "age",
+      // Add other attribute names as needed
+    };
+    params.ExpressionAttributeValues = expressionAttributeValues;
+  }
+
+  const command = new ScanCommand(params);
+
+  try {
+    const response = await client.send(command);
+    console.log(response.Items);
+  } catch (error) {
+    console.error(error);
+  }
+}
